@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -23,7 +24,7 @@ func GetJsonMap(data []byte) (map[string]json.RawMessage, error) {
 	return jsonMap, nil
 }
 
-func RemoveLowerDash(input_file, output_file string ) {
+func RemoveLowerDash(input_file, output_file string) {
 
 	start := time.Now()
 
@@ -38,7 +39,6 @@ func RemoveLowerDash(input_file, output_file string ) {
 
 	w := bufio.NewWriter(f)
 
-
 	data, err := ioutil.ReadFile(input_file)
 	Check(err)
 
@@ -52,7 +52,7 @@ func RemoveLowerDash(input_file, output_file string ) {
 
 		point_ := ","
 		if len(jsonMap) == i_ {
-			point_= fmt.Sprintf("")
+			point_ = fmt.Sprintf("")
 		}
 
 		if k == "definitions" {
@@ -66,10 +66,10 @@ func RemoveLowerDash(input_file, output_file string ) {
 
 				point := ","
 				if len(definitions) == i {
-					point= fmt.Sprintf("")
+					point = fmt.Sprintf("")
 				}
 
-				resource , _ := GetJsonMap(_v)
+				resource, _ := GetJsonMap(_v)
 
 				if _, ok := resource["properties"]; ok == false {
 					fmt.Fprintf(w, ` "%s" : %s `+point, _k, _v)
@@ -83,7 +83,7 @@ func RemoveLowerDash(input_file, output_file string ) {
 				for r_k, r_v := range resource {
 
 					_point := ","
-					if _i == len(resource){
+					if _i == len(resource) {
 						_point = fmt.Sprintf("")
 					}
 
@@ -119,7 +119,7 @@ func RemoveLowerDash(input_file, output_file string ) {
 							for pv_k, pv_v := range propertr_value {
 
 								___point := ","
-								if(___i == len(propertr_value)){
+								if ___i == len(propertr_value) {
 									___point = fmt.Sprintf("")
 								}
 
@@ -168,5 +168,69 @@ func RemoveLowerDash(input_file, output_file string ) {
 
 	t := time.Now()
 	elapsed := t.Sub(start)
-	fmt.Printf( " -------- Successful executed %s -------- ", elapsed)
+	fmt.Printf(" -------- Successful executed %s -------- ", elapsed)
+}
+
+func GenerateStructMap(input_file, output_file, file_package, map_name string) {
+	start := time.Now()
+
+	f, err := os.Create(output_file)
+	Check(err)
+
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	w := bufio.NewWriter(f)
+
+	data, err := ioutil.ReadFile(input_file)
+	Check(err)
+
+	jsonMap, err := GetJsonMap(data)
+	Check(err)
+
+	fmt.Fprintf(w, `package %s
+	
+import (
+	"errors"
+)
+
+func GetFhirResourceInstance(resource_name string) (interface{}, error) {
+
+	%s := map[string]interface{}{`, file_package, map_name)
+
+	for k, v := range jsonMap {
+		if k == "definitions" {
+
+			definitions, _ := GetJsonMap(v)
+			for _k, _v := range definitions {
+
+				resource, _ := GetJsonMap(_v)
+
+				if _, ok := resource["properties"]; ok == true {
+					_k := strings.Replace(_k, "_", "", -1)
+					fmt.Fprintf(w, "\n"+`		"%s" : &%s{}, `, _k, _k)
+
+				}
+			}
+		}
+	}
+
+	fmt.Fprintln(w, `
+	}
+	resource, ok := FhirStructMap[resource_name]
+	if ok == true {
+		return resource, nil
+	}
+	return resource, errors.New("Resource not found")
+}`)
+
+	err = w.Flush()
+	Check(err)
+
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Printf(" -------- Successful executed %s -------- ", elapsed)
 }
