@@ -200,8 +200,8 @@ import (
 `, file_package)
 
 	fmt.Fprintln(w, `
-func GetFhirResourceMap() map[string]string{
-	return map[string]interface{}{`)
+func GetFhirResourceMap() map[string]interface{}{
+	return map[string]c{}{`)
 	for k, v := range jsonMap {
 		if k == "definitions" {
 			definitions, _ := GetJsonMap(v)
