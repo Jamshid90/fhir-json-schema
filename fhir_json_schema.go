@@ -201,7 +201,7 @@ import (
 
 	fmt.Fprintln(w, `
 func GetFhirResourceMap() map[string]interface{}{
-	return map[string]c{}{`)
+	return map[string]interface{}{`)
 	for k, v := range jsonMap {
 		if k == "definitions" {
 			definitions, _ := GetJsonMap(v)
