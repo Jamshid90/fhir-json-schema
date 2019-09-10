@@ -191,41 +191,44 @@ func GenerateStructMap(input_file, output_file, file_package, map_name string) {
 	jsonMap, err := GetJsonMap(data)
 	Check(err)
 
-	fmt.Fprintf(w, `package %s
-	
+	fmt.Fprintf(w, `
+package %s
+
 import (
 	"errors"
 )
+`, file_package)
 
-func GetFhirResourceInstance(resource_name string) (interface{}, error) {
-
-	%s := map[string]interface{}{`, file_package, map_name)
-
+	fmt.Fprintln(w, `
+func GetFhirResourceMap() map[string]string{
+	return map[string]interface{}{`)
 	for k, v := range jsonMap {
 		if k == "definitions" {
-
 			definitions, _ := GetJsonMap(v)
 			for _k, _v := range definitions {
-
 				resource, _ := GetJsonMap(_v)
-
 				if _, ok := resource["properties"]; ok == true {
-					_k := strings.Replace(_k, "_", "", -1)
-					fmt.Fprintf(w, "\n"+`		"%s" : &%s{}, `, _k, _k)
-
+					properties, _ := GetJsonMap(resource["properties"])
+					if _, ok := properties["resourceType"]; ok == true {
+						_k := strings.Replace(_k, "_", "", -1)
+						fmt.Fprintf(w, `		"%s" : &%s{}, `+"\n", _k, _k)
+					}
 				}
 			}
 		}
 	}
+	fmt.Fprintln(w, `		}
+}`)
 
-	fmt.Fprintln(w, `
-	}
-	resource, ok := FhirStructMap[resource_name]
+	fmt.Fprintf(w, `
+func GetFhirResourceInstance(resource_name string) (interface{}, error) {
+	%s := GetFhirResourceMap()
+	resource, ok := %s[resource_name]
 	if ok == true {
 		return resource, nil
 	}
 	return resource, errors.New("Resource not found")
-}`)
+}`, map_name, map_name)
 
 	err = w.Flush()
 	Check(err)
