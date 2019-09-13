@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -203,17 +202,13 @@ import (
 func GetFhirResourceMap() map[string]interface{}{
 	return map[string]interface{}{`)
 	for k, v := range jsonMap {
-		if k == "definitions" {
-			definitions, _ := GetJsonMap(v)
-			for _k, _v := range definitions {
-				resource, _ := GetJsonMap(_v)
-				if _, ok := resource["properties"]; ok == true {
-					properties, _ := GetJsonMap(resource["properties"])
-					if _, ok := properties["resourceType"]; ok == true {
-						_k := strings.Replace(_k, "_", "", -1)
-						fmt.Fprintf(w, `		"%s" : &%s{}, `+"\n", _k, _k)
-					}
-				}
+		if k == "discriminator" {
+			discriminator, err := GetJsonMap(v)
+			Check(err)
+			mapping, err := GetJsonMap(discriminator["mapping"])
+			Check(err)
+			for _k, _ := range mapping {
+				fmt.Fprintf(w, `		"%s" : &%s{}, `+"\n", _k, _k)
 			}
 		}
 	}
